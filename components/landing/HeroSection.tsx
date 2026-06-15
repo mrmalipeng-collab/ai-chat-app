@@ -40,7 +40,7 @@ export default function HeroSection() {
           </div>
         </div>
         {/* Chat Mockup */}
-        <div className="hidden lg:block">
+        <div className="hidden lg:block" aria-hidden="true">
           <div className="bg-[#1e293b] rounded-2xl border border-[#334155] p-6 shadow-2xl">
             <div className="flex items-center gap-2 mb-4">
               <div className="w-3 h-3 rounded-full bg-red-500/60" />
