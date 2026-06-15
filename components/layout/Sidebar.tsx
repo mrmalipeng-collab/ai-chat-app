@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -14,20 +14,21 @@ export default function Sidebar() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentId = searchParams.get('id')
-  const supabase = createClient()
-
-  const loadConversations = useCallback(async () => {
-    const { data } = await supabase
-      .from('conversations')
-      .select('*')
-      .order('updated_at', { ascending: false })
-      .limit(50)
-    if (data) setConversations(data as Conversation[])
-  }, [supabase])
+  const supabase = useMemo(() => createClient(), [])
 
   useEffect(() => {
-    loadConversations()
-  }, [loadConversations, currentId])
+    let isMounted = true
+    async function load() {
+      const { data } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(50)
+      if (isMounted && data) setConversations(data as Conversation[])
+    }
+    load()
+    return () => { isMounted = false }
+  }, [supabase])
 
   async function createNewConversation() {
     const {
@@ -42,7 +43,12 @@ export default function Sidebar() {
       .single()
 
     if (data) {
-      await loadConversations()
+      const { data: list } = await supabase
+        .from('conversations')
+        .select('*')
+        .order('updated_at', { ascending: false })
+        .limit(50)
+      if (list) setConversations(list as Conversation[])
       router.push(`/chat?id=${data.id}`)
     }
   }
