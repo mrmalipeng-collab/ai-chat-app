@@ -20,6 +20,30 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
   // 无 id 时自动创建新对话
   if (!conversationId) {
+    // 先检查最近是否有空对话可以复用
+    const { data: existing } = await supabase
+      .from('conversations')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('title', '新对话')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+
+    if (existing) {
+      // 检查是否真的是空对话（无消息）
+      const { count } = await supabase
+        .from('messages')
+        .select('id', { count: 'exact', head: true })
+        .eq('conversation_id', existing.id)
+
+      if (count === 0) {
+        redirect(`/chat?id=${existing.id}`)
+        return null
+      }
+    }
+
+    // 无可复用的空对话，创建新的
     const { data } = await supabase
       .from('conversations')
       .insert({ user_id: user.id, title: '新对话' })

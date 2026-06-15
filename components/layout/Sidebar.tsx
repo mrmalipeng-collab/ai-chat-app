@@ -11,6 +11,7 @@ import type { Conversation } from '@/lib/types'
 
 export default function Sidebar() {
   const [conversations, setConversations] = useState<Conversation[]>([])
+  const [isCreating, setIsCreating] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const currentId = searchParams.get('id')
@@ -31,25 +32,31 @@ export default function Sidebar() {
   }, [supabase])
 
   async function createNewConversation() {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-    if (!user) return
+    if (isCreating) return
+    setIsCreating(true)
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
-    const { data } = await supabase
-      .from('conversations')
-      .insert({ user_id: user.id, title: '新对话' })
-      .select()
-      .single()
-
-    if (data) {
-      const { data: list } = await supabase
+      const { data } = await supabase
         .from('conversations')
-        .select('*')
-        .order('updated_at', { ascending: false })
-        .limit(50)
-      if (list) setConversations(list as Conversation[])
-      router.push(`/chat?id=${data.id}`)
+        .insert({ user_id: user.id, title: '新对话' })
+        .select()
+        .single()
+
+      if (data) {
+        const { data: list } = await supabase
+          .from('conversations')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(50)
+        if (list) setConversations(list as Conversation[])
+        router.push(`/chat?id=${data.id}`)
+      }
+    } finally {
+      setIsCreating(false)
     }
   }
 
@@ -71,11 +78,12 @@ export default function Sidebar() {
         </Link>
         <Button
           onClick={createNewConversation}
-          className="w-full bg-[#7c3aed] hover:bg-[#6d28d9] gap-2 text-sm"
+          disabled={isCreating}
+          className="w-full bg-[#7c3aed] hover:bg-[#6d28d9] gap-2 text-sm disabled:opacity-50"
           size="sm"
         >
           <Plus className="w-3.5 h-3.5" />
-          新对话
+          {isCreating ? '创建中...' : '新对话'}
         </Button>
       </div>
 
